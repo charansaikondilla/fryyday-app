@@ -1,0 +1,114 @@
+/* ==========================================================================
+   Fryyday design tokens — dark (default) + light
+   Brand accent: #EAFF00
+   ========================================================================== */
+
+:root {
+  --accent: #eaff00;
+  --accent-hi: #f4ff6a;
+  --accent-press: #d6ea00;
+  --accent-ink: #0b0b0c;
+  --danger: #ff5c5c;
+  --danger-ink: #140707;
+  --success: #3ee28f;
+
+  --font: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --r-xs: 10px;
+  --r-sm: 14px;
+  --r-md: 18px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Safe areas — overridden by the device frame / native mode */
+  --sat: 12px;
+  --sab: 10px;
+  --tab-h: 66px;
+  --pad: 20px;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b0b0c;
+  --bg-2: #101012;
+  --surface: #161618;
+  --surface-2: #1d1d20;
+  --surface-3: #27272b;
+  --surface-hi: #2f2f34;
+  --glass: rgba(16, 16, 18, 0.72);
+  --glass-strong: rgba(14, 14, 16, 0.86);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.14);
+  --line-3: rgba(255, 255, 255, 0.24);
+  --outline: rgba(255, 255, 255, 0.86);
+  --text: #f6f6f3;
+  --text-2: #b6b6bb;
+  --text-3: #7d7d84;
+  --accent-fg: #eaff00;
+  --accent-soft: rgba(234, 255, 0, 0.11);
+  --accent-line: rgba(234, 255, 0, 0.45);
+  --accent-glow: rgba(234, 255, 0, 0.38);
+  --card-grad: linear-gradient(180deg, #1a1a1d 0%, #141416 100%);
+  --shadow-1: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+  --shadow-2: 0 24px 64px -16px rgba(0, 0, 0, 0.75);
+  --scrim: rgba(0, 0, 0, 0.56);
+  --img-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.78) 100%);
+  --glow-a: rgba(234, 255, 0, 0.13);
+  --glow-b: rgba(234, 255, 0, 0.06);
+  --map-land: #141416;
+  --map-block: #1b1b1e;
+  --map-road: #2a2a2f;
+  --map-road-major: #34343a;
+  --map-park: #17241a;
+  --map-water: #0f1d26;
+  --map-label: #7d7d84;
+  --stage-bg: #060607;
+  --skeleton-a: #18181b;
+  --skeleton-b: #232327;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f7f4ee;
+  --bg-2: #f2eee7;
+  --surface: #ffffff;
+  --surface-2: #f2efe9;
+  --surface-3: #e9e5dd;
+  --surface-hi: #ffffff;
+  --glass: rgba(250, 248, 244, 0.76);
+  --glass-strong: rgba(250, 248, 244, 0.9);
+  --line: rgba(20, 20, 12, 0.08);
+  --line-2: rgba(20, 20, 12, 0.13);
+  --line-3: rgba(20, 20, 12, 0.22);
+  --outline: rgba(14, 14, 12, 0.88);
+  --text: #0e0e0c;
+  --text-2: #57574f;
+  --text-3: #8b8b84;
+  --accent-fg: #5a6800;
+  --accent-soft: rgba(208, 232, 0, 0.24);
+  --accent-line: rgba(140, 160, 0, 0.55);
+  --accent-glow: rgba(205, 235, 0, 0.55);
+  --card-grad: linear-gradient(180deg, #ffffff 0%, #fdfcf9 100%);
+  --shadow-1: 0 1px 2px rgba(20, 20, 12, 0.04), 0 10px 28px -14px rgba(20, 20, 12, 0.18);
+  --shadow-2: 0 28px 64px -20px rgba(20, 20, 12, 0.3);
+  --scrim: rgba(18, 18, 12, 0.34);
+  --img-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.72) 100%);
+  --glow-a: rgba(226, 255, 40, 0.34);
+  --glow-b: rgba(255, 214, 160, 0.3);
+  --map-land: #f1ece2;
+  --map-block: #e8e2d6;
+  --map-road: #ffffff;
+  --map-road-major: #ffffff;
+  --map-park: #dfecc9;
+  --map-water: #cfe3ec;
+  --map-label: #8b8b84;
+  --stage-bg: #ece7dd;
+  --skeleton-a: #ece8e1;
+  --skeleton-b: #f6f3ee;
+}
