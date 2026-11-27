@@ -99,7 +99,7 @@ export function Settings() {
         </motion.p>
       </motion.div>
 
-      <Sheet open={logoutOpen} onClose={() => setLogoutOpen(false)} title="Log out?" subtitle="You can log back in anytime with your number.">
+      <Sheet open={logoutOpen} onClose={() => setLogoutOpen(false)} title="Log out?" subtitle="You can log back in anytime with your number and password.">
         <div className="col gap-10">
           <button type="button" className="btn btn-outline btn-block" onClick={() => setLogoutOpen(false)}>
             Stay logged in

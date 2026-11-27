@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Ban, Bell, ChevronRight, Download, Eye, LogOut, Trash2 } from 'lucide-react';
+import { Ban, Bell, ChevronRight, Download, Eye, KeyRound, LogOut, Trash2 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useToast } from '../context/ToastContext';
 import { useNav } from '../lib/nav';
 import { fadeUp, stagger } from '../lib/motion';
 import { cx, downloadFile } from '../lib/utils';
+import { changePassword } from '../lib/accounts';
+import { PasswordInput, PasswordRules } from './Auth';
 import Logo from '../components/Logo';
 import { Screen, TopBar } from '../components/Screen';
-import { Toggle } from '../components/ui';
+import { Sheet, Toggle } from '../components/ui';
 
 /** 34 — Account controls */
 export default function AccountControls() {
@@ -18,6 +20,26 @@ export default function AccountControls() {
   const [confirm, setConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const visible = state.settings.visible;
+  const accountId = state.session.accountId;
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pw, setPw] = useState({ current: '', next: '' });
+  const [pwError, setPwError] = useState('');
+
+  const closePw = () => {
+    setPwOpen(false);
+    setPw({ current: '', next: '' });
+    setPwError('');
+  };
+
+  const savePassword = (e) => {
+    e.preventDefault();
+    if (!pw.current) return setPwError('Enter your current password.');
+    const res = changePassword(accountId, pw.current, pw.next);
+    if (!res.ok) return setPwError(res.error);
+    closePw();
+    toast.show({ title: 'Password changed', body: 'Use the new one next time you log in.', icon: 'check' });
+    return undefined;
+  };
 
   const download = () => {
     const data = {
@@ -67,6 +89,16 @@ export default function AccountControls() {
             <span className="row-text">Notification preferences</span>
             <ChevronRight className="chev" size={20} />
           </motion.button>
+          {accountId && (
+            <motion.button variants={fadeUp} type="button" className="list-row" onClick={() => setPwOpen(true)}>
+              <KeyRound className="row-icon" size={22} strokeWidth={2} />
+              <span className="row-text">
+                Change password
+                <small>+91 {state.user.phone ? `${state.user.phone.slice(0, 2)}•••••${state.user.phone.slice(-3)}` : ''}</small>
+              </span>
+              <ChevronRight className="chev" size={20} />
+            </motion.button>
+          )}
           <motion.button variants={fadeUp} type="button" className="list-row" onClick={() => nav.go('/settings/blocked')}>
             <Ban className="row-icon" size={22} strokeWidth={2} />
             <span className="row-text">Blocked accounts</span>
@@ -123,6 +155,23 @@ export default function AccountControls() {
           )}
         </AnimatePresence>
       </motion.div>
+      <Sheet open={pwOpen} onClose={closePw} title="Change password" subtitle="You’ll use the new password next time you log in.">
+        <form onSubmit={savePassword} noValidate>
+          <label className="field-label" htmlFor="pw-current">
+            Current password
+          </label>
+          <PasswordInput id="pw-current" value={pw.current} onChange={(v) => setPw((x) => ({ ...x, current: v }))} autoComplete="current-password" placeholder="Current password" />
+          <label className="field-label mt-16" htmlFor="pw-next" style={{ display: 'block' }}>
+            New password
+          </label>
+          <PasswordInput id="pw-next" value={pw.next} onChange={(v) => setPw((x) => ({ ...x, next: v }))} autoComplete="new-password" placeholder="At least 6 characters" />
+          <PasswordRules value={pw.next} />
+          {pwError && <p className="field-error">{pwError}</p>}
+          <button type="submit" className="btn btn-primary btn-block mt-20">
+            Save new password
+          </button>
+        </form>
+      </Sheet>
     </Screen>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion, useAnimationControls } from 'framer-motion';
 import { CalendarDays, ChevronRight, Clock, MapPin, Pencil, Users, X } from 'lucide-react';
-import { ACTIVITIES, CREATE_ACTIVITIES, VENUES, venueByName, venueType } from '../data/catalog';
+import { ACTIVITIES, CREATE_ACTIVITIES, resolveVenue, venueByName, venueType } from '../data/catalog';
 import { useStore } from '../context/StoreContext';
 import { useToast } from '../context/ToastContext';
 import { at, formatTime, formatWhen, nextDays } from '../lib/dates';
@@ -227,7 +227,7 @@ export function ReviewPlan() {
   const { state, createPlan } = useStore();
   const d = state.draft;
   const [publishing, setPublishing] = useState(false);
-  const venue = useMemo(() => (d ? venueByName(d.venue) || VENUES[0] : null), [d]);
+  const venue = useMemo(() => (d ? resolveVenue(d.venue, d.venueArea || state.user.area) : null), [d, state.user.area]);
   const timer = useRef(null);
   useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -297,7 +297,7 @@ export function ReviewPlan() {
             <span className="row-text">
               {venue.name}
               <small>
-                {venue.area} · {venue.km} km
+                {venue.custom ? `Your own place · ${venue.area}` : `${venue.area} · ${venue.km} km`}
               </small>
             </span>
           </div>

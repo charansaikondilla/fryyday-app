@@ -2972,6 +2972,7 @@
   gap: 12px;
   padding: 12px 12px 12px 16px;
   border-radius: 20px;
+  margin-bottom: 14px;
   background: var(--surface);
   box-shadow: inset 0 0 0 1px var(--line);
 }
@@ -3000,4 +3001,108 @@
   color: var(--accent-fg);
   background: var(--accent-soft);
   box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+
+/* --------------------------------------------------------------------------
+   Auth — password field
+   -------------------------------------------------------------------------- */
+.mt-10 {
+  margin-top: 10px;
+}
+
+.input.is-invalid {
+  border-color: rgba(255, 92, 92, 0.7);
+  box-shadow: 0 0 0 4px rgba(255, 92, 92, 0.12);
+}
+
+.pw-wrap .input {
+  padding-right: 52px;
+}
+
+.pw-eye {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--text-2);
+}
+
+@media (hover: hover) {
+  .pw-eye:hover {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+}
+
+.pw-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 10px;
+}
+
+.pw-rule {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-3);
+  transition: color 0.2s ease;
+}
+
+.pw-rule-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1.5px var(--line-3);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pw-rule.ok {
+  color: var(--accent-fg);
+}
+
+.pw-rule.ok .pw-rule-dot {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: none;
+}
+
+/* Typed (custom) place in the venue picker */
+.venue-custom {
+  border: 1.5px dashed var(--accent-line) !important;
+}
+
+.time-type {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 8px 0 16px;
+  margin-bottom: 14px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.time-input {
+  height: 42px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line-2);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 750;
+  color-scheme: inherit;
 }

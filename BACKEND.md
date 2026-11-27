@@ -91,7 +91,9 @@ push_subscriptions (user_id, endpoint, keys jsonb)
 ## 5. Rollout steps
 
 1. **Supabase project + schema** — create the tables above, triggers for vote counters, RLS policies.
-2. **Auth** — replace the demo OTP screen with real phone OTP; create `profiles` on first sign-in.
+2. **Auth** — the app already has phone + password accounts *on the device* (`src/lib/accounts.js`).
+   Swap that file for Supabase Auth (phone + password, optionally OTP) so the same account works on
+   every phone; create `profiles` on first sign-in.
 3. **Data layer** — add `src/lib/api.js`; make `StoreContext` load plans/votes from the API and keep
    `localStorage` only as an offline cache. Start with read-only Discover + plan details + **votes**.
 4. **Joining & hosting** — requests, approvals, waitlist, create/edit/cancel through Edge Functions.

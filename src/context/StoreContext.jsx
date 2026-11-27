@@ -1,12 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { ACTIVITIES, PEOPLE, REPLIES, VENUES, venueByName } from '../data/catalog';
+import { ACTIVITIES, PEOPLE, REPLIES, resolveVenue } from '../data/catalog';
 import { createSeed, defaultSettings, defaultUser, ME, STATE_VERSION } from '../data/seed';
 import { at, DAY, dayKey, daysFromToday, isWeekend, startOfDay } from '../lib/dates';
 import { load, remove, save } from '../lib/storage';
+import { createAccount, deleteAccountRecord, stateKeyFor, verifyLogin } from '../lib/accounts';
 import { firstName, haptic, pick, uid } from '../lib/utils';
 import { useToast } from './ToastContext';
 
-const KEY = 'fryyday:state';
+const SESSION_KEY = 'fryyday:session'; // id of the account that is logged in on this device
+const keyFor = (state) => stateKeyFor(state.session?.accountId);
 const StoreContext = createContext(null);
 
 /* --------------------------------------------------------------------------
@@ -51,17 +53,35 @@ function rebase(state) {
   return s;
 }
 
-function initState() {
-  const saved = load(KEY, null);
-  if (saved && saved.version === STATE_VERSION && saved.plans) {
-    try {
-      // Older saves (before voting existed) have no `votes` map — add it without wiping the user's data.
-      return rebase({ ...saved, votes: saved.votes && typeof saved.votes === 'object' ? saved.votes : {} });
-    } catch {
-      return freshState();
-    }
+/** Load a saved state blob, or null when it is missing / from an older app version. */
+function restore(key) {
+  const saved = load(key, null);
+  if (!saved || saved.version !== STATE_VERSION || !saved.plans || !saved.session) return null;
+  try {
+    // Older saves (before voting existed) have no `votes` map — add it without wiping the user's data.
+    return rebase({ ...saved, votes: saved.votes && typeof saved.votes === 'object' ? saved.votes : {} });
+  } catch {
+    return null;
   }
-  return freshState();
+}
+
+function initState() {
+  const accountId = load(SESSION_KEY, null);
+  if (typeof accountId === 'string' && accountId) {
+    const mine = restore(stateKeyFor(accountId));
+    if (mine) return { ...mine, session: { ...mine.session, accountId, loggedIn: true } };
+    remove(SESSION_KEY);
+  }
+  return restore(stateKeyFor(null)) || freshState();
+}
+
+/** Write a state blob to its own slot right now (used before switching accounts). */
+function persist(state) {
+  const key = keyFor(state);
+  if (!save(key, state)) {
+    // Storage full (e.g. a very large photo) — save without the photo.
+    save(key, { ...state, user: { ...state.user, photo: null } });
+  }
 }
 
 const sys = (text) => ({ id: uid('m'), from: 'system', kind: 'system', text, at: Date.now() });
@@ -215,13 +235,7 @@ export function StoreProvider({ children }) {
 
   /* Persist (debounced) */
   useEffect(() => {
-    const t = setTimeout(() => {
-      const { draft, ...rest } = state;
-      if (!save(KEY, { ...rest, draft })) {
-        // Storage full (e.g. a very large photo) — save without the photo.
-        save(KEY, { ...rest, draft, user: { ...rest.user, photo: null } });
-      }
-    }, 250);
+    const t = setTimeout(() => persist(state), 250);
     return () => clearTimeout(t);
   }, [state]);
 
@@ -250,6 +264,12 @@ export function StoreProvider({ children }) {
   }, []);
 
   const notify = useCallback((t) => toastRef.current.show(t), []);
+
+  const clearTimers = useCallback(() => {
+    timers.current.forEach((t) => clearTimeout(t));
+    timers.current.clear();
+    setTyping({});
+  }, []);
 
   /* ---------- simulated "other people" ---------- */
 
@@ -355,12 +375,13 @@ export function StoreProvider({ children }) {
 
   /* Resume pending join requests after a reload. */
   useEffect(() => {
+    if (!stateRef.current.session.loggedIn) return;
     stateRef.current.requests
       .filter((r) => r.dir === 'out' && r.status === 'pending')
       .forEach((r, i) => schedule(() => approveMyRequest(r.planId, r.id), 2500 + i * 1500));
-    // run once on mount
+    // run on mount and whenever a different account logs in
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [state.session.accountId]);
 
   /* ---------- public API ---------- */
 
@@ -394,15 +415,60 @@ export function StoreProvider({ children }) {
           s.settings.notifications[key] = value;
         });
       },
-      logout() {
-        set((s) => {
-          s.session.loggedIn = false;
+      /** Create an account on this device. Returns { ok } or { ok: false, field, error }. */
+      signUp(phone, password) {
+        const res = createAccount(phone, password);
+        if (!res.ok) return res;
+        persist(stateRef.current);
+        clearTimers();
+        const next = freshState({
+          session: { loggedIn: true, onboarded: false, accountId: res.account.id },
+          user: { ...defaultUser(), phone },
         });
+        save(SESSION_KEY, res.account.id);
+        persist(next);
+        setState(next);
+        return { ok: true, onboarded: false };
+      },
+      /** Log in with phone + password. Returns { ok, onboarded } or { ok: false, field, error }. */
+      logIn(phone, password) {
+        const res = verifyLogin(phone, password);
+        if (!res.ok) return res;
+        const id = res.account.id;
+        persist(stateRef.current);
+        clearTimers();
+        const saved = restore(stateKeyFor(id));
+        const next = saved
+          ? { ...saved, session: { ...saved.session, loggedIn: true, accountId: id } }
+          : freshState({ session: { loggedIn: true, onboarded: false, accountId: id }, user: { ...defaultUser(), phone } });
+        save(SESSION_KEY, id);
+        setState(next);
+        return { ok: true, onboarded: !!next.session.onboarded, name: next.user.name };
+      },
+      logout() {
+        const cur = stateRef.current;
+        if (!cur.session.accountId) {
+          set((s) => {
+            s.session.loggedIn = false;
+          });
+          return;
+        }
+        persist({ ...cur, draft: null });
+        clearTimers();
+        remove(SESSION_KEY);
+        // Back to the signed-out "guest" slot (keeps any older pre-accounts data on this device intact).
+        const guest = restore(stateKeyFor(null));
+        setState(guest ? { ...guest, session: { onboarded: false, loggedIn: false } } : freshState());
       },
       deleteAccount() {
-        timers.current.forEach((t) => clearTimeout(t));
-        timers.current.clear();
-        remove(KEY);
+        clearTimers();
+        const id = stateRef.current.session.accountId;
+        if (id) {
+          deleteAccountRecord(id);
+          remove(SESSION_KEY);
+        } else {
+          remove(stateKeyFor(null));
+        }
         setState(freshState());
       },
       resetDemo() {
@@ -554,7 +620,7 @@ export function StoreProvider({ children }) {
       createPlan(draft) {
         const id = uid('p');
         const chatId = `c-${id}`;
-        const v = venueByName(draft.venue) || VENUES[0];
+        const v = resolveVenue(draft.venue, draft.venueArea || stateRef.current.user.area || 'Jubilee Hills');
         const act = ACTIVITIES[draft.activity] || ACTIVITIES.coffee;
         const plan = {
           id,
@@ -601,7 +667,7 @@ export function StoreProvider({ children }) {
         if (changes.capacity && changes.capacity !== before.capacity) parts.push(`${changes.capacity} spots`);
         set((s) => {
           const pl = s.plans[planId];
-          const v = changes.venue ? venueByName(changes.venue) : null;
+          const v = changes.venue ? resolveVenue(changes.venue, pl.area) : null;
           if (changes.venue && changes.venue !== pl.venue) {
             pl.change = { field: 'venue', from: pl.venue, to: changes.venue, at: Date.now() };
           } else if (changes.start && changes.start !== pl.start) {
@@ -775,7 +841,7 @@ export function StoreProvider({ children }) {
         });
       },
     }),
-    [set, schedule, notify, approveMyRequest, incomingRequest, incomingMessage, simulateReply],
+    [set, schedule, notify, clearTimers, approveMyRequest, incomingRequest, incomingMessage, simulateReply],
   );
 
   const value = useMemo(() => ({ state, typing, ...api }), [state, typing, api]);

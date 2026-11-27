@@ -55,7 +55,9 @@ full-screen like a native app.
 ### The flow (in the order from the PDF)
 
 1. **First open** — splash, Welcome (Find my people / Log in)
-2. **First-time setup** — mobile number → 4-digit code (any digits work in the demo) → name & photo
+2. **Sign up / Log in** — mobile number + password (real checks: wrong password, unknown number,
+   duplicate number). Each account keeps its own data on the device; change your password in
+   **Settings → Account controls**. Then first-time setup: name & photo
    (real photo upload) → interests (pick at least 3) → area (uses device location, or choose manually)
 3. **Home & Discover** — activity grid home, Discover list with search, filters and
    Today / Tomorrow / Weekend, plus the **map view** (public venues only, area-level radius)

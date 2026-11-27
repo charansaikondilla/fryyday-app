@@ -12,7 +12,10 @@ export function uid(prefix = 'id') {
 /** A tiny vibration on devices that support it (Android). Silently ignored elsewhere. */
 export function haptic(ms = 10) {
   try {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(ms);
+    if (typeof navigator === 'undefined' || !navigator.vibrate) return;
+    // Browsers block (and log) vibration until the person has tapped the page at least once.
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+    navigator.vibrate(ms);
   } catch {
     /* not supported */
   }

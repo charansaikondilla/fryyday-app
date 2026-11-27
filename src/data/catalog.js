@@ -104,6 +104,31 @@ export function venueByName(name) {
   return VENUES.find((v) => v.name === name);
 }
 
+/** A place the host typed themselves (not in the list). Distance/map spot are stable per name. */
+export function customVenue(name, area = 'Jubilee Hills') {
+  const clean = String(name || '').trim().slice(0, 60);
+  let h = 2166136261;
+  for (let i = 0; i < clean.length; i++) {
+    h ^= clean.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  h >>>= 0;
+  return {
+    id: `custom-${h.toString(36)}`,
+    name: clean,
+    area,
+    type: 'custom',
+    km: Math.round((0.8 + (h % 32) / 10) * 10) / 10,
+    map: [16 + (h % 68), 24 + ((h >>> 8) % 52)],
+    custom: true,
+  };
+}
+
+/** Known venue by name, or a typed custom place. */
+export function resolveVenue(name, area) {
+  return venueByName(name) || customVenue(name, area);
+}
+
 export const AREAS = [
   'Jubilee Hills',
   'Banjara Hills',

@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, MapPin, Search } from 'lucide-react';
+import { Check, Clock, MapPin, PenLine, Search } from 'lucide-react';
 import { AREAS, CITIES, VENUES, venueType } from '../data/catalog';
 import { useStore } from '../context/StoreContext';
 import { useToast } from '../context/ToastContext';
@@ -64,20 +64,61 @@ export function AreaSheet({ open, onClose, value, onPick }) {
 
 /* Public venue picker for creating / editing plans. */
 export function VenueSheet({ open, onClose, activity, value, onPick }) {
+  const { state } = useStore();
   const [q, setQ] = useState('');
   const type = venueType(activity);
+  const typed = q.trim().replace(/\s+/g, ' ').slice(0, 60);
+  const canUseTyped = typed.length >= 3 && !VENUES.some((v) => v.name.toLowerCase() === typed.toLowerCase());
+  const area = state.user.area || 'Jubilee Hills';
+  const isCustomValue = !!value && !VENUES.some((v) => v.name === value);
   const list = useMemo(() => {
     const query = q.trim().toLowerCase();
     const sorted = [...VENUES].sort((a, b) => (a.type === type ? -1 : 0) - (b.type === type ? -1 : 0) || a.km - b.km);
     return sorted.filter((v) => !query || v.name.toLowerCase().includes(query) || v.area.toLowerCase().includes(query));
   }, [q, type]);
   return (
-    <Sheet open={open} onClose={onClose} title="Choose a public place" subtitle="Meet in busy, public venues — it keeps everyone comfortable.">
-      <div className="input-wrap" style={{ marginBottom: 12 }}>
+    <Sheet open={open} onClose={onClose} title="Choose a public place" subtitle="Pick one below or type any public place — cafés, parks, malls, courts.">
+      <form
+        className="input-wrap"
+        style={{ marginBottom: 12 }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (canUseTyped) onPick(typed);
+          else if (list.length === 1) onPick(list[0].name);
+        }}
+      >
         <Search size={19} strokeWidth={2.2} />
-        <input className="input search" placeholder="Search cafés, parks, courts…" value={q} onChange={(e) => setQ(e.target.value)} />
-      </div>
+        <input className="input search" placeholder="Search or type a place…" value={q} maxLength={60} onChange={(e) => setQ(e.target.value)} enterKeyHint="done" />
+      </form>
       <div className="list">
+        {canUseTyped && (
+          <button type="button" className="option-row venue-custom" onClick={() => onPick(typed)} style={{ minHeight: 64 }}>
+            <span className="venue-ic">
+              <PenLine size={18} strokeWidth={2.2} />
+            </span>
+            <span className="grow" style={{ minWidth: 0 }}>
+              <span className="ellipsis" style={{ display: 'block' }}>
+                Use “{typed}”
+              </span>
+              <small className="t-cap">Your own place · {area}</small>
+            </span>
+            <Radio on={value === typed} />
+          </button>
+        )}
+        {isCustomValue && !canUseTyped && !typed && (
+          <button type="button" className="option-row is-on" onClick={() => onPick(value)} style={{ minHeight: 64 }}>
+            <span className="venue-ic">
+              <MapPin size={18} strokeWidth={2.2} />
+            </span>
+            <span className="grow" style={{ minWidth: 0 }}>
+              <span className="ellipsis" style={{ display: 'block' }}>
+                {value}
+              </span>
+              <small className="t-cap">Your own place</small>
+            </span>
+            <Radio on />
+          </button>
+        )}
         {list.map((v) => (
           <button key={v.id} type="button" className={cx('option-row', value === v.name && 'is-on')} onClick={() => onPick(v.name)} style={{ minHeight: 64 }}>
             <span className="venue-ic">
@@ -94,7 +135,7 @@ export function VenueSheet({ open, onClose, activity, value, onPick }) {
             <Radio on={value === v.name} />
           </button>
         ))}
-        {!list.length && <p className="t-sub t-center mt-12">No public places match “{q}”.</p>}
+        {!list.length && !canUseTyped && <p className="t-sub t-center mt-12">Type at least 3 letters to add your own place.</p>}
       </div>
     </Sheet>
   );
@@ -121,8 +162,26 @@ export function DateSheet({ open, onClose, value, onPick }) {
 /* Time picker */
 export function TimeSheet({ open, onClose, value, onPick }) {
   const slots = timeSlots(6, 23);
+  const [custom, setCustom] = useState(value || '18:00');
+  useEffect(() => {
+    if (open) setCustom(value || '18:00');
+  }, [open, value]);
   return (
     <Sheet open={open} onClose={onClose} title="Pick a time">
+      <form
+        className="time-type"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (/^\d{2}:\d{2}$/.test(custom)) onPick(custom);
+        }}
+      >
+        <Clock size={19} strokeWidth={2.2} />
+        <span className="grow">Exact time</span>
+        <input type="time" className="time-input" value={custom} onChange={(e) => setCustom(e.target.value)} aria-label="Exact time" />
+        <button type="submit" className="btn btn-primary btn-xs" disabled={!/^\d{2}:\d{2}$/.test(custom)}>
+          Set
+        </button>
+      </form>
       <div className="time-grid">
         {slots.map((s) => (
           <motion.button key={s.value} type="button" whileTap={{ scale: 0.94 }} className={cx('time-cell', value === s.value && 'is-on')} onClick={() => onPick(s.value)}>

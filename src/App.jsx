@@ -12,7 +12,7 @@ import { routeKind, TAB_PATHS } from './lib/nav';
 
 import Splash from './screens/Splash';
 import Welcome from './screens/Welcome';
-import { AuthPhone, AuthVerify } from './screens/Auth';
+import { AuthPhone } from './screens/Auth';
 import { SetupProfile, SetupInterests, SetupArea } from './screens/Setup';
 import Home from './screens/Home';
 import Discover from './screens/Discover';
@@ -107,7 +107,18 @@ function GuestOnly({ children }) {
   return children;
 }
 
+// Profile setup needs a logged-in (signed up) account that hasn't finished onboarding yet.
+function SetupOnly({ children }) {
+  const { state } = useStore();
+  const present = useIsPresent();
+  if (!present) return children;
+  if (!state.session.loggedIn) return <Navigate to="/welcome" replace />;
+  if (state.session.onboarded) return <Navigate to="/home" replace />;
+  return children;
+}
+
 const authed = (el) => <RequireAuth>{el}</RequireAuth>;
+const setup = (el) => <SetupOnly>{el}</SetupOnly>;
 const guest = (el) => <GuestOnly>{el}</GuestOnly>;
 
 function AppRoutes({ location }) {
@@ -116,10 +127,10 @@ function AppRoutes({ location }) {
       <Route path="/" element={<Splash />} />
       <Route path="/welcome" element={guest(<Welcome />)} />
       <Route path="/auth" element={guest(<AuthPhone />)} />
-      <Route path="/auth/verify" element={guest(<AuthVerify />)} />
-      <Route path="/setup/profile" element={guest(<SetupProfile />)} />
-      <Route path="/setup/interests" element={guest(<SetupInterests />)} />
-      <Route path="/setup/area" element={guest(<SetupArea />)} />
+      <Route path="/auth/verify" element={<Navigate to="/auth" replace />} />
+      <Route path="/setup/profile" element={setup(<SetupProfile />)} />
+      <Route path="/setup/interests" element={setup(<SetupInterests />)} />
+      <Route path="/setup/area" element={setup(<SetupArea />)} />
 
       <Route path="/home" element={authed(<Home />)} />
       <Route path="/discover" element={authed(<Discover />)} />
