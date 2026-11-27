@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useStore } from '../context/StoreContext';
+import { homePath, useStore } from '../context/StoreContext';
 import { useNav } from '../lib/nav';
 import Logo from '../components/Logo';
 
 export default function Splash() {
   const { state } = useStore();
   const nav = useNav();
-  const target = state.session.loggedIn && state.session.onboarded ? '/home' : state.session.loggedIn ? '/setup/profile' : '/welcome';
+  const target = homePath(state);
 
   useEffect(() => {
     const t = setTimeout(() => nav.replace(target), 1900);

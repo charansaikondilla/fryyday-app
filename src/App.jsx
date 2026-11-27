@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useIsPresent } from 'framer-motion';
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
-import { StoreProvider, useStore } from './context/StoreContext';
+import { setupPath, StoreProvider, useStore } from './context/StoreContext';
 import DeviceFrame from './components/DeviceFrame';
 import TabBar from './components/TabBar';
 import OfflineOverlay from './components/OfflineOverlay';
@@ -95,7 +95,7 @@ function RequireAuth({ children }) {
   const present = useIsPresent();
   if (!present) return children;
   if (!state.session.loggedIn) return <Navigate to="/welcome" replace />;
-  if (!state.session.onboarded) return <Navigate to="/setup/profile" replace />;
+  if (!state.session.onboarded) return <Navigate to={setupPath(state)} replace />;
   return children;
 }
 
@@ -107,13 +107,19 @@ function GuestOnly({ children }) {
   return children;
 }
 
+const SETUP_ORDER = ['/setup/profile', '/setup/interests', '/setup/area'];
+
 // Profile setup needs a logged-in (signed up) account that hasn't finished onboarding yet.
+// Steps can't be skipped: opening a later step before an earlier one is done goes to the first unfinished step.
 function SetupOnly({ children }) {
   const { state } = useStore();
   const present = useIsPresent();
+  const { pathname } = useLocation();
   if (!present) return children;
   if (!state.session.loggedIn) return <Navigate to="/welcome" replace />;
   if (state.session.onboarded) return <Navigate to="/home" replace />;
+  const allowed = SETUP_ORDER.indexOf(setupPath(state));
+  if (SETUP_ORDER.indexOf(pathname) > allowed) return <Navigate to={SETUP_ORDER[allowed]} replace />;
   return children;
 }
 

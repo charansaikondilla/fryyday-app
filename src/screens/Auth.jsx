@@ -117,9 +117,12 @@ export function AuthPhone() {
       if (mode === 'login' && res.onboarded) {
         toast.show({ title: `Welcome back${res.name ? `, ${firstName(res.name)}` : ''}!`, icon: 'heart' });
         nav.replace('/home');
-      } else {
-        if (mode === 'signup') toast.show({ title: 'Account created', body: 'Now let’s set up your profile.', icon: 'check' });
+      } else if (mode === 'signup') {
+        toast.show({ title: 'Account created 🎉', body: 'Three quick steps and you’re in.', icon: 'check' });
         nav.replace('/setup/profile');
+      } else {
+        toast.show({ title: 'Welcome back!', body: 'Let’s finish setting up your profile.', icon: 'heart' });
+        nav.replace(res.setupPath || '/setup/profile');
       }
     }, 450);
   };

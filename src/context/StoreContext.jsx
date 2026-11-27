@@ -112,6 +112,24 @@ export function getPerson(state, id) {
   return PEOPLE[id] || { id, name: 'Member', avatar: null };
 }
 
+/** Where a signed-up user should continue profile setup (resumes at the first unfinished step). */
+export function setupPath(state) {
+  const u = state.user || {};
+  const hasName = !!u.name && u.name.trim().length >= 2;
+  // setupStep is saved as each step is finished (1 = profile, 2 = interests, 3 = area).
+  const step = Math.min(hasName ? Number(u.setupStep) || 2 : 1, 3);
+  if (step <= 1) return '/setup/profile';
+  if (step === 2 || !Array.isArray(u.interests) || u.interests.length < 3) return '/setup/interests';
+  return '/setup/area';
+}
+
+/** Where the app should open for this session. */
+export function homePath(state) {
+  if (!state.session.loggedIn) return '/welcome';
+  if (!state.session.onboarded) return setupPath(state);
+  return '/home';
+}
+
 export function spotsLeft(plan) {
   return Math.max(0, plan.capacity - plan.attendees.length);
 }
@@ -476,7 +494,7 @@ export function StoreProvider({ children }) {
           : freshState({ session: { loggedIn: true, onboarded: false, accountId: id }, user: { ...defaultUser(), phone } });
         save(SESSION_KEY, id);
         setState(next);
-        return { ok: true, onboarded: !!next.session.onboarded, name: next.user.name };
+        return { ok: true, onboarded: !!next.session.onboarded, name: next.user.name, setupPath: setupPath(next) };
       },
       logout() {
         const cur = stateRef.current;

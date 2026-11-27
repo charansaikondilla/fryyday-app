@@ -14,15 +14,27 @@ import { ACTIVITY_ICONS } from '../components/icons';
 import { CityPin } from '../components/Illustrations';
 import { AreaSheet } from '../components/Sheets';
 
+const STEP_NAMES = ['About you', 'Interests', 'Your area'];
+const STEP_PATHS = ['/welcome', '/setup/profile', '/setup/interests'];
+
 function SetupHeader({ step }) {
   return (
     <TopBar
       back
-      backTo="/welcome"
+      // Previous screen in history; if the app was reopened mid-setup there is none, so go to the previous step.
+      backTo={STEP_PATHS[step - 1]}
       center={<Logo size={22} />}
       className="setup-top"
       right={<span className="t-cap">{step}/3</span>}
     />
+  );
+}
+
+function StepLabel({ step }) {
+  return (
+    <p className="setup-step-label">
+      <span className="t-accent">Step {step} of 3</span> · {STEP_NAMES[step - 1]}
+    </p>
   );
 }
 
@@ -38,7 +50,10 @@ export function SetupProfile() {
   const [photo, setPhoto] = useState(state.user.photo || null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
-  const valid = name.trim().length >= 2;
+  const [touched, setTouched] = useState(false);
+  const clean = name.trim();
+  const nameError = !clean ? 'Enter your name to continue.' : clean.length < 2 ? 'Name needs at least 2 letters.' : !/\p{L}/u.test(clean) ? 'Use letters in your name.' : '';
+  const valid = !nameError;
 
   const onFile = async (e) => {
     const file = e.target.files?.[0];
@@ -55,8 +70,9 @@ export function SetupProfile() {
   };
 
   const next = () => {
-    if (!valid) return;
-    updateUser({ name: name.trim(), bio: bio.trim(), photo });
+    setTouched(true);
+    if (!valid || busy) return;
+    updateUser({ name: clean.replace(/\s+/g, ' '), bio: bio.trim(), photo, setupStep: Math.max(2, state.user.setupStep || 0) });
     nav.go('/setup/interests');
   };
 
@@ -71,12 +87,15 @@ export function SetupProfile() {
         </div>
       }
       footer={
-        <button type="button" className={cx('btn btn-primary btn-block btn-lg', valid && 'shine')} disabled={!valid} onClick={next}>
+        <button type="button" className={cx('btn btn-primary btn-block btn-lg', valid && 'shine')} disabled={busy} onClick={next}>
           Continue
         </button>
       }
     >
       <motion.div variants={stagger(0.07)} initial="hidden" animate="show">
+        <motion.div variants={fadeUp}>
+          <StepLabel step={1} />
+        </motion.div>
         <motion.h1 variants={fadeUp} className="t-h1 mt-8">
           Add your name and photo
         </motion.h1>
@@ -112,7 +131,28 @@ export function SetupProfile() {
 
         <motion.label variants={fadeUp} className="field mt-8">
           <span className="field-label">Your name</span>
-          <input className="input" placeholder="e.g. Ananya Rao" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+          <input
+            className={cx('input', touched && nameError && 'is-invalid')}
+            placeholder="e.g. Ananya Rao"
+            value={name}
+            maxLength={40}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => clean && setTouched(true)}
+            onKeyDown={(e) => e.key === 'Enter' && next()}
+            autoComplete="name"
+            enterKeyHint="next"
+            aria-invalid={(touched && !!nameError) || undefined}
+          />
+          <AnimatePresence>
+            {touched && nameError && (
+              <motion.span className="field-error" role="alert" style={{ display: 'block' }} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                {nameError}
+              </motion.span>
+            )}
+          </AnimatePresence>
+          <span className="t-cap" style={{ display: 'block', marginTop: 6 }}>
+            Photo is optional — you can add it later.
+          </span>
         </motion.label>
         <motion.label variants={fadeUp} className="field">
           <span className="field-label">
@@ -149,14 +189,14 @@ export function SetupInterests() {
       footer={
         <div className="col gap-12" style={{ alignItems: 'center' }}>
           <motion.p key={picked.length} className="pick-count" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-            {picked.length} selected
+            {valid ? `${picked.length} selected · looking good!` : `${picked.length} selected · pick ${3 - picked.length} more`}
           </motion.p>
           <button
             type="button"
             className={cx('btn btn-primary btn-block btn-lg', valid && 'shine')}
             disabled={!valid}
             onClick={() => {
-              updateUser({ interests: picked });
+              updateUser({ interests: picked, setupStep: 3 });
               nav.go('/setup/area');
             }}
           >
@@ -166,11 +206,14 @@ export function SetupInterests() {
       }
     >
       <motion.div variants={stagger(0.05)} initial="hidden" animate="show">
+        <motion.div variants={fadeUp} className="t-center">
+          <StepLabel step={2} />
+        </motion.div>
         <motion.h1 variants={fadeUp} className="t-h1 mt-8 t-center">
           What brings you out?
         </motion.h1>
         <motion.p variants={fadeUp} className="t-body mt-8 t-center">
-          Pick at least 3 interests.
+          Pick at least 3 — we’ll show you plans you’ll actually enjoy.
         </motion.p>
         <div className="interest-grid mt-24">
           {INTERESTS.map((id) => {
@@ -223,15 +266,19 @@ export function SetupArea() {
   const [areaOpen, setAreaOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
 
+  const done = useRef(false);
   const finish = (area, how) => {
+    if (done.current) return;
+    done.current = true;
     updateUser({ area, city: 'Hyderabad' });
     completeOnboarding();
     nav.replace('/home');
     setTimeout(() => {
       toast.show({
-        title: `Welcome to Fryyday, ${firstName(state.user.name) || 'friend'}!`,
-        body: how === 'gps' ? `Showing plans around ${area}.` : `Area set to ${area}.`,
+        title: `You’re all set, ${firstName(state.user.name) || 'friend'}! 🎉`,
+        body: how === 'gps' ? `Showing plans around ${area}.` : `Showing plans around ${area}. You can change it anytime in your profile.`,
         icon: 'heart',
+        duration: 4800,
       });
     }, 450);
   };
@@ -248,9 +295,13 @@ export function SetupArea() {
         // Only the area is kept — the precise position is never stored or shared.
         finish('Jubilee Hills', 'gps');
       },
-      () => {
+      (err) => {
         setLocating(false);
-        toast.show({ title: 'Location unavailable', body: 'Pick your area instead — it only takes a second.', icon: 'alert' });
+        toast.show({
+          title: err && err.code === 1 ? 'Location is turned off' : 'Couldn’t find your location',
+          body: 'No problem — pick your area instead. It only takes a second.',
+          icon: 'alert',
+        });
         setAreaOpen(true);
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
@@ -283,8 +334,11 @@ export function SetupArea() {
       }
     >
       <motion.div variants={stagger(0.08)} initial="hidden" animate="show">
+        <motion.div variants={fadeUp}>
+          <StepLabel step={3} />
+        </motion.div>
         <motion.div variants={fadeUp} className="row center mt-4">
-          <CityPin size={310} />
+          <CityPin size={280} />
         </motion.div>
         <motion.h1 variants={fadeUp} className="t-display mt-12" style={{ fontSize: 38 }}>
           Find plans

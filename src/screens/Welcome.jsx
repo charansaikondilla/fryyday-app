@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { Coffee, Sparkles } from 'lucide-react';
+import { ArrowRight, Coffee, Sparkles } from 'lucide-react';
+import { setupPath, useStore } from '../context/StoreContext';
 import { IMG } from '../data/images';
 import { useStatusTone } from '../context/FrameContext';
 import { useNav } from '../lib/nav';
@@ -24,6 +25,9 @@ const words = (text, delay) =>
 /** 01 — Welcome and first impression */
 export default function Welcome() {
   const nav = useNav();
+  const { state, logout } = useStore();
+  // Signed up but setup not finished (e.g. went back from step 1): offer to continue instead of signing up again.
+  const midSetup = state.session.loggedIn && !state.session.onboarded;
   useStatusTone('light');
 
   return (
@@ -82,16 +86,40 @@ export default function Welcome() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.05, duration: 0.7, ease: EASE }}
         >
-          <button type="button" className="btn btn-primary btn-block btn-lg shine" onClick={() => nav.go('/auth?mode=signup')}>
-            <Sparkles size={19} strokeWidth={2.4} />
-            Find my people
-          </button>
-          <p className="welcome-login">
-            Already a member?{' '}
-            <button type="button" className="text-link" onClick={() => nav.go('/auth?mode=login')}>
-              Log in
-            </button>
-          </p>
+          {midSetup ? (
+            <>
+              <button type="button" className="btn btn-primary btn-block btn-lg shine" onClick={() => nav.go(setupPath(state))}>
+                Continue setting up
+                <ArrowRight size={19} strokeWidth={2.4} />
+              </button>
+              <p className="welcome-login">
+                Not your number?{' '}
+                <button
+                  type="button"
+                  className="text-link"
+                  onClick={() => {
+                    logout();
+                    nav.go('/auth?mode=signup');
+                  }}
+                >
+                  Use a different one
+                </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <button type="button" className="btn btn-primary btn-block btn-lg shine" onClick={() => nav.go('/auth?mode=signup')}>
+                <Sparkles size={19} strokeWidth={2.4} />
+                Find my people
+              </button>
+              <p className="welcome-login">
+                Already a member?{' '}
+                <button type="button" className="text-link" onClick={() => nav.go('/auth?mode=login')}>
+                  Log in
+                </button>
+              </p>
+            </>
+          )}
         </motion.div>
       </div>
     </div>

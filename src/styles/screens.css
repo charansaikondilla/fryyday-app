@@ -3123,3 +3123,11 @@
   justify-content: center;
   gap: 8px;
 }
+
+/* ---------- onboarding step label ---------- */
+.setup-step-label {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-2);
+  margin-top: 4px;
+}
