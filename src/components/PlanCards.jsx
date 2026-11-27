@@ -6,6 +6,7 @@ import { formatWhen } from '../lib/dates';
 import { fadeUp } from '../lib/motion';
 import { cx, firstName } from '../lib/utils';
 import { Avatar, Img } from './ui';
+import VoteControl from './Vote';
 
 export function spotsLabel(plan) {
   const n = spotsLeft(plan);
@@ -39,11 +40,14 @@ export function PlanHeroCard({ plan, height = 214 }) {
       <Img src={plan.image} alt="" activity={plan.activity} className="plan-hero-img" style={{ height }} scrim>
         <div className="plan-hero-top">
           <RoleBadge plan={plan} />
-          {saved && (
-            <span className="pill pill-glass" aria-label="Saved">
-              <Bookmark size={14} strokeWidth={2.6} fill="currentColor" />
-            </span>
-          )}
+          <div className="row gap-6" style={{ marginLeft: 'auto', alignItems: 'center' }}>
+            {saved && (
+              <span className="pill pill-glass" aria-label="Saved">
+                <Bookmark size={14} strokeWidth={2.6} fill="currentColor" />
+              </span>
+            )}
+            <VoteControl plan={plan} size="sm" />
+          </div>
         </div>
         <div className="plan-hero-info">
           <h3>{plan.title}</h3>

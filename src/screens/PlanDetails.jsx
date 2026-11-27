@@ -29,6 +29,7 @@ import { useStatusTone } from '../context/FrameContext';
 import { daysFromToday, formatWhen } from '../lib/dates';
 import { useNav } from '../lib/nav';
 import { fadeUp, stagger } from '../lib/motion';
+import VoteControl, { VoteSummary } from '../components/Vote';
 import { cx, downloadFile, firstName, mapsUrl, openExternal, planToIcs, shareOrCopy } from '../lib/utils';
 import Logo from '../components/Logo';
 import { Screen, TopBar } from '../components/Screen';
@@ -291,6 +292,16 @@ export default function PlanDetails() {
           <motion.div variants={fadeUp} className="note" style={{ boxShadow: 'inset 0 0 0 1.5px rgba(255,92,92,.5)' }}>
             <XCircle size={20} strokeWidth={2.2} style={{ color: 'var(--danger)' }} />
             This plan was cancelled{plan.cancelReason ? ` — ${plan.cancelReason}` : ''}.
+          </motion.div>
+        )}
+
+        {plan.status !== 'cancelled' && (
+          <motion.div variants={fadeUp} className="vote-panel">
+            <div style={{ minWidth: 0 }}>
+              <h4>{plan.hostId === ME ? 'How people rate your plan' : 'Worth going?'}</h4>
+              <VoteSummary plan={plan} />
+            </div>
+            <VoteControl plan={plan} variant="solid" />
           </motion.div>
         )}
 

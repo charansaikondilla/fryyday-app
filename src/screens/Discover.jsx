@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronDown, Crosshair, List, Map as MapIcon, Plus, Search, X } from 'lucide-react';
+import { ChevronDown, Clock3, Crosshair, Flame, List, Map as MapIcon, Plus, Search, X } from 'lucide-react';
 import { ACTIVITIES, DISCOVER_FILTERS, venueByName } from '../data/catalog';
 import { discoverPlans, useStore } from '../context/StoreContext';
 import { formatWhen } from '../lib/dates';
@@ -47,6 +47,7 @@ export default function Discover() {
   const filter = DISCOVER_FILTERS.includes(params.get('filter')) ? params.get('filter') : 'all';
   const when = ['today', 'tomorrow', 'weekend'].includes(params.get('when')) ? params.get('when') : 'today';
   const view = params.get('view') === 'map' ? 'map' : 'list';
+  const sort = params.get('sort') === 'top' ? 'top' : 'soon';
   const [q, setQ] = useState('');
   const [cityOpen, setCityOpen] = useState(false);
   const [radiusOpen, setRadiusOpen] = useState(false);
@@ -56,13 +57,13 @@ export default function Discover() {
   const update = (patch) => {
     const next = new URLSearchParams(params);
     Object.entries(patch).forEach(([k, v]) => {
-      if (v == null || v === '' || (k === 'filter' && v === 'all') || (k === 'when' && v === 'today') || (k === 'view' && v === 'list')) next.delete(k);
+      if (v == null || v === '' || (k === 'filter' && v === 'all') || (k === 'when' && v === 'today') || (k === 'view' && v === 'list') || (k === 'sort' && v === 'soon')) next.delete(k);
       else next.set(k, v);
     });
     setParams(next, { replace: true });
   };
 
-  const plans = useMemo(() => discoverPlans(state, { filter, when, q }), [state, filter, when, q]);
+  const plans = useMemo(() => discoverPlans(state, { filter, when, q, sort }), [state, filter, when, q, sort]);
   const mapPlans = useMemo(
     () => discoverPlans(state, { filter, when: 'any', q: '' }).filter((p) => p.km <= state.settings.radiusKm),
     [state, filter],
@@ -157,9 +158,20 @@ export default function Discover() {
           <div className="mt-12">
             <Segmented value={when} onChange={(v) => update({ when: v })} options={WHEN} />
           </div>
+          <div className="row gap-8 mt-12" role="radiogroup" aria-label="Sort plans">
+            {[
+              { v: 'soon', label: 'Soonest', Icon: Clock3 },
+              { v: 'top', label: 'Top voted', Icon: Flame },
+            ].map(({ v, label, Icon }) => (
+              <button key={v} type="button" role="radio" aria-checked={sort === v} className={cx('sort-toggle', sort === v && 'on')} onClick={() => update({ sort: v })}>
+                <Icon size={15} strokeWidth={2.4} />
+                {label}
+              </button>
+            ))}
+          </div>
           <AnimatePresence mode="wait">
             {plans.length ? (
-              <motion.div key={`${filter}-${when}`} className="list mt-16" variants={stagger(0.07, 0.04)} initial="hidden" animate="show" exit={{ opacity: 0, transition: { duration: 0.15 } }}>
+              <motion.div key={`${filter}-${when}-${sort}`} className="list mt-16" variants={stagger(0.07, 0.04)} initial="hidden" animate="show" exit={{ opacity: 0, transition: { duration: 0.15 } }}>
                 {plans.map((p) => (
                   <PlanHeroCard key={p.id} plan={p} />
                 ))}

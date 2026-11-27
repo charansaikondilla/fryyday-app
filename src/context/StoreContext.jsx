@@ -20,6 +20,7 @@ function freshState(keep = {}) {
     user: defaultUser(),
     settings: defaultSettings(),
     ...createSeed(),
+    votes: {},
     ...keep,
   };
 }
@@ -54,7 +55,8 @@ function initState() {
   const saved = load(KEY, null);
   if (saved && saved.version === STATE_VERSION && saved.plans) {
     try {
-      return rebase(saved);
+      // Older saves (before voting existed) have no `votes` map — add it without wiping the user's data.
+      return rebase({ ...saved, votes: saved.votes && typeof saved.votes === 'object' ? saved.votes : {} });
     } catch {
       return freshState();
     }
@@ -135,7 +137,7 @@ export function matchesWhen(plan, when) {
   return d >= 0;
 }
 
-export function discoverPlans(state, { filter = 'all', when = 'any', q = '' } = {}) {
+export function discoverPlans(state, { filter = 'all', when = 'any', q = '', sort = 'soon' } = {}) {
   if (state.user.city && state.user.city !== 'Hyderabad') return [];
   const query = q.trim().toLowerCase();
   return Object.values(state.plans)
@@ -155,7 +157,41 @@ export function discoverPlans(state, { filter = 'all', when = 'any', q = '' } = 
         p.area.toLowerCase().includes(query) ||
         (ACTIVITIES[p.activity]?.label || '').toLowerCase().includes(query),
     )
-    .sort((a, b) => a.start - b.start);
+    .sort((a, b) => (sort === 'top' ? voteTally(state, b).score - voteTally(state, a).score : 0) || a.start - b.start);
+}
+
+/* ---------- voting ---------- */
+
+/** Stable pseudo-random number for a plan id, so demo vote counts never jump between reloads. */
+function hashId(id) {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/** Votes from everyone else. New plans start at 0; demo plans get believable counts. */
+export function baseVotes(plan) {
+  if (Number.isFinite(plan.ups) || Number.isFinite(plan.downs)) return { ups: plan.ups || 0, downs: plan.downs || 0 };
+  if (plan.hostId === ME) return { ups: 0, downs: 0 };
+  const h = hashId(plan.id);
+  return { ups: 8 + (h % 54), downs: (h >>> 8) % 7 };
+}
+
+export function myVote(state, planId) {
+  const v = state.votes?.[planId];
+  return v === 1 || v === -1 ? v : 0;
+}
+
+export function voteTally(state, plan) {
+  const base = baseVotes(plan);
+  const mine = myVote(state, plan.id);
+  const ups = base.ups + (mine === 1 ? 1 : 0);
+  const downs = base.downs + (mine === -1 ? 1 : 0);
+  const total = ups + downs;
+  return { ups, downs, score: ups - downs, mine, percent: total ? Math.round((ups / total) * 100) : 0 };
 }
 
 export function chatForPlan(state, plan) {
@@ -613,6 +649,22 @@ export function StoreProvider({ children }) {
             if (n.type === 'review' && n.planId === planId) n.read = true;
           });
         });
+      },
+
+      /* voting — dir is 1 (up) or -1 (down); tapping the same arrow again removes the vote */
+      vote(planId, dir) {
+        const s0 = stateRef.current;
+        const plan = s0.plans[planId];
+        if (!plan || (dir !== 1 && dir !== -1)) return 0;
+        if (plan.hostId === ME) return myVote(s0, planId);
+        const next = myVote(s0, planId) === dir ? 0 : dir;
+        set((s) => {
+          if (!s.votes) s.votes = {};
+          if (next) s.votes[planId] = next;
+          else delete s.votes[planId];
+        });
+        haptic(next ? 10 : 6);
+        return next;
       },
 
       /* chat */
