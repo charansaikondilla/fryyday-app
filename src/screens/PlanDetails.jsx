@@ -29,7 +29,7 @@ import { useStatusTone } from '../context/FrameContext';
 import { daysFromToday, formatWhen } from '../lib/dates';
 import { useNav } from '../lib/nav';
 import { fadeUp, stagger } from '../lib/motion';
-import VoteControl, { VoteSummary } from '../components/Vote';
+import VoteControl, { VoteSummary, ViewCount } from '../components/Vote';
 import { cx, downloadFile, firstName, mapsUrl, openExternal, planToIcs, shareOrCopy } from '../lib/utils';
 import Logo from '../components/Logo';
 import { Screen, TopBar } from '../components/Screen';
@@ -72,6 +72,12 @@ export default function PlanDetails() {
   const barOpacity = useTransform(scrollY, [180, 260], [0, 1]);
   const [solid, setSolid] = useState(false);
   useStatusTone(solid ? 'auto' : 'light');
+
+  useEffect(() => {
+    if (plan) store.recordView(plan.id);
+    // count a view once when the plan is opened
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   useEffect(() => {
     if (params.get('cancel') === '1') setParams({}, { replace: true });
@@ -300,6 +306,7 @@ export default function PlanDetails() {
             <div style={{ minWidth: 0 }}>
               <h4>{plan.hostId === ME ? 'How people rate your plan' : 'Worth going?'}</h4>
               <VoteSummary plan={plan} />
+              <ViewCount plan={plan} className="t-cap mt-4" size={14} />
             </div>
             <VoteControl plan={plan} variant="solid" />
           </motion.div>

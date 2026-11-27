@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useParams } from 'react-router-dom';
-import { Share2 } from 'lucide-react';
+import { Globe, Share2, Users } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useNav } from '../lib/nav';
 import { fadeUp, stagger } from '../lib/motion';
@@ -11,6 +11,8 @@ import { HighFive } from '../components/Illustrations';
 import Confetti from '../components/Confetti';
 import { PlanSummary } from '../components/PlanCards';
 import { NotFound } from './PlanDetails';
+import { ViewCount } from '../components/Vote';
+import { formatWhen } from '../lib/dates';
 
 /** 10 — Plan published */
 export default function Published() {
@@ -52,9 +54,18 @@ export default function Published() {
         <motion.h1 variants={fadeUp} className="t-h1 mt-8" style={{ fontSize: 34 }}>
           Your plan is live!
         </motion.h1>
-        <motion.p variants={fadeUp} className="t-body mt-8" style={{ maxWidth: 280 }}>
-          Let’s turn a little plan into a great evening.
+        <motion.p variants={fadeUp} className="t-body mt-8" style={{ maxWidth: 300 }}>
+          “{plan.title}” is published for {formatWhen(plan.start)}. Share it to get more views and requests.
         </motion.p>
+        <motion.div variants={fadeUp} className="publish-meta mt-12">
+          <span className="pill pill-accent">
+            {plan.audience === 'friends' ? <Users size={14} strokeWidth={2.4} /> : <Globe size={14} strokeWidth={2.4} />}
+            {plan.audience === 'friends' ? 'Friends only' : 'Visible nearby'}
+          </span>
+          <span className="pill pill-muted">
+            <ViewCount plan={plan} size={14} />
+          </span>
+        </motion.div>
       </motion.div>
       <motion.div variants={stagger(0.08, 0.6)} initial="hidden" animate="show" className="mt-20">
         <PlanSummary plan={plan} onClick={() => nav.go(`/plan/${id}`)} />

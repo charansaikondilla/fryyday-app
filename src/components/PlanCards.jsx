@@ -6,7 +6,7 @@ import { formatWhen } from '../lib/dates';
 import { fadeUp } from '../lib/motion';
 import { cx, firstName } from '../lib/utils';
 import { Avatar, Img } from './ui';
-import VoteControl from './Vote';
+import VoteControl, { ViewCount } from './Vote';
 
 export function spotsLabel(plan) {
   const n = spotsLeft(plan);
@@ -60,6 +60,7 @@ export function PlanHeroCard({ plan, height = 214 }) {
               <MapPin size={16} strokeWidth={2.1} />
               {plan.area} · {plan.km} km
             </span>
+            <ViewCount plan={plan} size={16} />
           </div>
           <div className="plan-hero-cta">
             {left > 0 && left <= 4 ? (
@@ -177,6 +178,9 @@ export function PlanSummary({ plan, hostLine = false, accent = false, onClick })
             <p>
               <Users size={15} strokeWidth={2.1} />
               {spotsLeft(plan)} open spots
+            </p>
+            <p>
+              <ViewCount plan={plan} />
             </p>
           </>
         )}

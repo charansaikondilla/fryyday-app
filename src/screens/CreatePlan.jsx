@@ -27,6 +27,18 @@ function defaultDraft() {
   };
 }
 
+/** Returns a friendly message when the draft can't be published yet, else ''. */
+export function draftProblem(d) {
+  if (!d) return 'Start with the basics first.';
+  const title = (d.title || '').trim();
+  if (!title) return 'Give your plan a name.';
+  if (title.length < 3) return 'Plan name needs at least 3 letters.';
+  if (!d.venue) return 'Choose a public place to meet.';
+  if (!/^\d{2}:\d{2}$/.test(d.time || '')) return 'Pick a start time.';
+  if (at(d.dayOffset, d.time) < Date.now() + 5 * 60000) return 'That time has already passed — pick a later time.';
+  return '';
+}
+
 /** 03 — Create a plan · step 1 of 2 */
 export function CreatePlan() {
   const nav = useNav();
@@ -52,14 +64,11 @@ export function CreatePlan() {
   };
 
   const next = () => {
-    if (!d.title.trim()) {
-      setError('Give your plan a name.');
+    const problem = draftProblem(d);
+    if (problem) {
+      setError(problem);
       shake.start({ x: [0, -8, 8, -4, 4, 0], transition: { duration: 0.4 } });
-      return;
-    }
-    if (!d.venue) {
-      setError('Choose a public place to meet.');
-      shake.start({ x: [0, -8, 8, -4, 4, 0], transition: { duration: 0.4 } });
+      haptic(14);
       return;
     }
     setError('');
@@ -225,8 +234,12 @@ export function ReviewPlan() {
   const nav = useNav();
   const toast = useToast();
   const { state, createPlan } = useStore();
-  const d = state.draft;
+  // Keep a copy of the draft: publishing clears it, but this screen is still on-screen while it animates out.
+  const snap = useRef(state.draft);
+  if (state.draft) snap.current = state.draft;
+  const d = snap.current;
   const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState('');
   const venue = useMemo(() => (d ? resolveVenue(d.venue, d.venueArea || state.user.area) : null), [d, state.user.area]);
   const timer = useRef(null);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -249,12 +262,37 @@ export function ReviewPlan() {
   const start = at(d.dayOffset, d.time);
 
   const publish = () => {
+    if (publishing) return;
+    const problem = draftProblem(d);
+    if (problem) {
+      setError(problem);
+      haptic(14);
+      return;
+    }
+    setError('');
     setPublishing(true);
     timer.current = setTimeout(() => {
-      const id = createPlan(d);
-      haptic(25);
-      nav.replace(`/plan/${id}/published`);
-      setTimeout(() => toast.show({ title: 'Your plan is live!', body: 'We’ll let you know when people request to join.', icon: 'check' }), 900);
+      try {
+        const id = createPlan(d);
+        haptic(25);
+        nav.replace(`/plan/${id}/published`);
+        // Plain timeout (not timer.current): this screen unmounts before the toast fires.
+        setTimeout(
+          () =>
+            toast.show({
+              title: 'Plan published 🎉',
+              body: `“${d.title.trim()}” is now visible to ${d.audience === 'friends' ? 'your friends' : 'people nearby'}. We’ll ping you when someone asks to join.`,
+              icon: 'check',
+              duration: 4800,
+            }),
+          900,
+        );
+      } catch (err) {
+        console.error('Publish failed', err);
+        setPublishing(false);
+        setError('Couldn’t publish your plan. Please try again.');
+        toast.show({ title: 'Couldn’t publish', body: 'Something went wrong — your draft is saved. Try again.', icon: 'alert', tone: 'danger' });
+      }
     }, 650);
   };
 
@@ -329,6 +367,17 @@ export function ReviewPlan() {
           <Users size={21} strokeWidth={2.1} />
           People request to join. You decide who comes.
         </motion.div>
+
+        <AnimatePresence>
+          {error && (
+            <motion.p className="field-error mt-12" role="alert" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              {error}{' '}
+              <button type="button" className="link-accent" onClick={() => nav.back('/create')}>
+                Fix it
+              </button>
+            </motion.p>
+          )}
+        </AnimatePresence>
       </motion.div>
     </Screen>
   );

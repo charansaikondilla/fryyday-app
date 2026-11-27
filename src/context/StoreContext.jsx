@@ -23,6 +23,7 @@ function freshState(keep = {}) {
     settings: defaultSettings(),
     ...createSeed(),
     votes: {},
+    views: {},
     ...keep,
   };
 }
@@ -59,7 +60,12 @@ function restore(key) {
   if (!saved || saved.version !== STATE_VERSION || !saved.plans || !saved.session) return null;
   try {
     // Older saves (before voting existed) have no `votes` map — add it without wiping the user's data.
-    return rebase({ ...saved, votes: saved.votes && typeof saved.votes === 'object' ? saved.votes : {} });
+    // Same for `views` (added later).
+    return rebase({
+      ...saved,
+      votes: saved.votes && typeof saved.votes === 'object' ? saved.votes : {},
+      views: saved.views && typeof saved.views === 'object' ? saved.views : {},
+    });
   } catch {
     return null;
   }
@@ -212,6 +218,33 @@ export function voteTally(state, plan) {
   const downs = base.downs + (mine === -1 ? 1 : 0);
   const total = ups + downs;
   return { ups, downs, score: ups - downs, mine, percent: total ? Math.round((ups / total) * 100) : 0 };
+}
+
+/* ---------- views ---------- */
+
+/**
+ * How many people have looked at a plan.
+ * Demo plans get a stable believable count; your own new plans start at 0 and pick up
+ * views over the first hours after publishing. Opening someone else's plan adds your view once.
+ */
+export function planViews(state, plan) {
+  if (!plan) return 0;
+  let base;
+  if (Number.isFinite(plan.views)) base = plan.views;
+  else if (plan.hostId === ME) {
+    const mins = Math.max(0, (Date.now() - (plan.createdAt || Date.now())) / 60000);
+    base = Math.min(480, Math.floor(Math.sqrt(mins) * 7));
+  } else {
+    const h = hashId(plan.id);
+    base = 40 + ((h >>> 4) % 320);
+  }
+  const mine = plan.hostId !== ME && state.views?.[plan.id] ? 1 : 0;
+  return base + mine;
+}
+
+export function formatViews(n) {
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k views`;
+  return `${n} view${n === 1 ? '' : 's'}`;
 }
 
 export function chatForPlan(state, plan) {
@@ -731,6 +764,17 @@ export function StoreProvider({ children }) {
         });
         haptic(next ? 10 : 6);
         return next;
+      },
+
+      /* views — counts once per person per plan; hosts don't add views to their own plans */
+      recordView(planId) {
+        const s0 = stateRef.current;
+        const plan = s0.plans[planId];
+        if (!plan || plan.hostId === ME || s0.views?.[planId]) return;
+        set((s) => {
+          if (!s.views) s.views = {};
+          s.views[planId] = Date.now();
+        });
       },
 
       /* chat */

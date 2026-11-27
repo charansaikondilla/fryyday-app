@@ -3106,3 +3106,20 @@
   font-weight: 750;
   color-scheme: inherit;
 }
+
+/* ---------- view counts ---------- */
+.view-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.vote-panel .view-count {
+  display: flex;
+}
+.publish-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}

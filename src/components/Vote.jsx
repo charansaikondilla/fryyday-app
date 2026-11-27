@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowBigDown, ArrowBigUp } from 'lucide-react';
-import { ME, useStore, voteTally } from '../context/StoreContext';
+import { ArrowBigDown, ArrowBigUp, Eye } from 'lucide-react';
+import { formatViews, ME, planViews, useStore, voteTally } from '../context/StoreContext';
 import { useToast } from '../context/ToastContext';
 import { cx } from '../lib/utils';
 
@@ -74,6 +75,24 @@ export function VoteSummary({ plan }) {
   return (
     <span className="t-cap">
       <strong className="vote-percent">{percent}% upvoted</strong> · {total} vote{total === 1 ? '' : 's'}
+    </span>
+  );
+}
+
+/** "👁 214 views" — re-checks every 30s so your own fresh plan visibly picks up views. */
+export function ViewCount({ plan, className, size = 15 }) {
+  const { state } = useStore();
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (plan.hostId !== ME) return undefined;
+    const t = setInterval(() => tick((n) => n + 1), 30000);
+    return () => clearInterval(t);
+  }, [plan.hostId]);
+  const n = planViews(state, plan);
+  return (
+    <span className={cx('view-count', className)} aria-label={formatViews(n)}>
+      <Eye size={size} strokeWidth={2.2} />
+      {formatViews(n)}
     </span>
   );
 }
